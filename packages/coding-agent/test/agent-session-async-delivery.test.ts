@@ -21,6 +21,7 @@ import type { ExtensionAPI } from "@oh-my-pi/pi-coding-agent/extensibility/exten
 import { AcpAgent } from "@oh-my-pi/pi-coding-agent/modes/acp/acp-agent";
 import { buildAsyncResultBlock } from "@oh-my-pi/pi-tui/chat/transcript-render-helpers";
 import { initTheme } from "@oh-my-pi/pi-tui/theme";
+import { AgentRegistry } from "@oh-my-pi/pi-coding-agent/registry/agent-registry";
 import { AgentSession } from "@oh-my-pi/pi-coding-agent/session/agent-session";
 import { ArtifactManager } from "@oh-my-pi/pi-coding-agent/session/artifacts";
 import {
@@ -346,7 +347,7 @@ describe("AgentSession owner-routed async delivery", () => {
 				outputPath: "/tmp/Reviewer.md",
 				outputMeta: { lineCount: 1, charCount: output.length },
 			},
-			{ totalDurationMs: 1000 },
+			{ totalDurationMs: 1000, registry: AgentRegistry.global() },
 		);
 		expect(envelope).toContain("<output>");
 		manager.register("task", "review", async () => envelope, { id: "Reviewer", ownerId: "Lead" });

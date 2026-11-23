@@ -9,6 +9,7 @@ import { formatDuration, prompt } from "@oh-my-pi/pi-utils";
 import { IrcBus } from "../irc/bus";
 import { agentMesh } from "../irc/mesh";
 import { parsePeerAddress } from "../irc/mesh-protocol";
+import { REMOTE_ID_PREFIX } from "../registry/remote-id";
 import waitDescription from "../prompts/tools/wait.md" with { type: "text" };
 import waitIdleTemplate from "../prompts/tools/wait-idle.md" with { type: "text" };
 import waitIdleForkTemplate from "../prompts/tools/wait-idle-fork.md" with { type: "text" };
@@ -97,7 +98,7 @@ interface WaitMessaging {
 function handOffMail(messaging: WaitMessaging, woke?: IrcMessage): Promise<void> | undefined {
 	const inbox = messaging.registry.get(messaging.senderId)?.session;
 	if (!inbox) return undefined;
-	const bus = IrcBus.global();
+	const bus = IrcBus.forRegistry(messaging.registry);
 	const mail = woke ? [woke] : [];
 	for (let msg = bus.take(messaging.senderId); msg; msg = bus.take(messaging.senderId)) mail.push(msg);
 	if (mail.length === 0) return inbox.hasIrcInterrupts() ? Promise.resolve() : undefined;
@@ -160,7 +161,8 @@ function pendingReplies(messaging: WaitMessaging): PendingReplies {
 	const since = registry.get(senderId)?.session?.runStartedAt ?? 0;
 	const asked = new Set<string>();
 	const mesh = agentMesh();
-	for (const { to, sentAt, promised } of IrcBus.global().unansweredSends(senderId, since)) {
+	for (const { to, sentAt, promised } of IrcBus.forRegistry(registry).unansweredSends(senderId, since)) {
+		if (to.startsWith(REMOTE_ID_PREFIX)) continue;
 		asked.add(to);
 		const peer = mesh && parsePeerAddress(to);
 		if (mesh && peer && !registry.get(to) && mesh.peer(peer.pid)) {
@@ -478,7 +480,7 @@ export class WaitTool implements AgentTool<typeof waitSchema, CoordinationDetail
 		// Only `busAbort` can reject this leg, and it fires once the wait has settled.
 		// Without a session to hand it to, a message the leg took would be lost.
 		const busLeg = messaging?.registry.get(messaging.senderId)?.session
-			? IrcBus.global()
+			? IrcBus.forRegistry(messaging.registry)
 					.wait(messaging.senderId, { directOnly: true, repliesFrom: asked }, 0, busAbort.signal)
 					.catch(() => null)
 			: undefined;
