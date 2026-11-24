@@ -110,7 +110,7 @@ export interface UnansweredSend {
 	promise?: string;
 }
 
-/** A message awaiting delivery; local-only sends never fall through to a peer tunnel. */
+/** A message awaiting delivery. localOnly skips the project-local instance mesh. */
 export type IrcSend = Omit<IrcMessage, "id" | "ts"> & { localOnly?: boolean };
 
 /** Public surface of the process-global IRC bus, implemented locally on main and by a proxy in workers. */
@@ -498,7 +498,10 @@ export class IrcBus implements IrcBusApi {
 		return this.#lastReply.get(from)?.get(to)?.ts;
 	}
 
-	async #deliver(message: IrcMessage, options: { expectsReply?: boolean; localOnly?: boolean }): Promise<IrcDeliveryReceipt> {
+	async #deliver(
+		message: IrcMessage,
+		options: { expectsReply?: boolean; localOnly?: boolean },
+	): Promise<IrcDeliveryReceipt> {
 		// Reach-by-name still must honor the @ns/name contract: an id in the reserved `@` space that is
 		// not `@<namespace>/<name>` (`@ns`, `@ns/`, `@/x`, bad alphabet) fails locally, so a mistyped id
 		// never reaches a transport as a bogus opts.toName and never masquerades as a local miss.
@@ -506,7 +509,6 @@ export class IrcBus implements IrcBusApi {
 		if (malformed) return { to: message.to, outcome: "failed", error: malformed.message };
 		const namespace = remoteNamespaceOf(message.to);
 		if (namespace !== undefined) {
-			if (options.localOnly) return { to: message.to, outcome: "failed", error: "Remote delivery is disabled for this send." };
 			const toName = remoteNameOf(message.to);
 			// Prefix-authoritative: an `@<namespace>/<name>` recipient is unambiguously remote and routes
 			// to its namespace's transport — a registered proxy ref is optional (reach-by-name). A ref is

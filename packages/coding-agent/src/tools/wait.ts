@@ -162,6 +162,8 @@ function pendingReplies(messaging: WaitMessaging): PendingReplies {
 	const asked = new Set<string>();
 	const mesh = agentMesh();
 	for (const { to, sentAt, promised } of IrcBus.forRegistry(registry).unansweredSends(senderId, since)) {
+		// A cross-process peer is nothing the caller started: its turn is not visible here, so it can
+		// neither sustain a reply wait nor be reported as having stopped. Its reply arrives on its own.
 		if (to.startsWith(REMOTE_ID_PREFIX)) continue;
 		asked.add(to);
 		const peer = mesh && parsePeerAddress(to);
@@ -218,7 +220,7 @@ function watchedAgentBlockedOnCaller(messaging: WaitMessaging, jobs: readonly As
 	const agents = jobs.flatMap(job => (job.agentId ? [job.agentId] : []));
 	if (agents.length === 0 || agents.length !== jobs.length) return undefined;
 	const { registry, senderId } = messaging;
-	const bus = IrcBus.global();
+	const bus = IrcBus.forRegistry(registry);
 	for (const id of agents) {
 		const via = registry.awaits.blockedVia(id, senderId, bus.lastMessageAt(senderId, id) ?? 0);
 		if (via) return { id, via };

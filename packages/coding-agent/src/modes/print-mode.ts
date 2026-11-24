@@ -582,7 +582,7 @@ async function runPrintModeCore(
 			}
 			if (asyncWaitExpired) {
 				writeStderrLine("Error: --max-time reached before the run ended; any running jobs were cancelled.");
-		}
+			}
 		}
 
 		// From this point onward a late blocker must be recorded without starting a
